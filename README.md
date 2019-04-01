@@ -1,74 +1,46 @@
-This is the project repo for the final project of the Udacity Self-Driving Car Nanodegree: Programming a Real Self-Driving Car. For more information about the project, see the project introduction [here](https://classroom.udacity.com/nanodegrees/nd013/parts/6047fe34-d93c-4f50-8336-b70ef10cb4b2/modules/e1a23b06-329a-4684-a717-ad476f0d8dff/lessons/462c933d-9f24-42d3-8bdc-a08a5fc866e4/concepts/5ab4b122-83e6-436d-850f-9f4d26627fd9).
+The goal of this project is to program the Udacity Carla vehicle so that it can detect and respond to traffic lights in real time when driving in a simulator environment and a real environment.
 
-Please use **one** of the two installation options, either native **or** docker installation.
+The connection of the different ROS nodes follows the descriptions shown below in the Block diagram.
+<img src="https://github.com/karthiksom/CarND-Capstone-1/blob/master/imgs/Overview.JPG" width="100%">
+Following are the additional Subscriber-Publisher transactions.
 
-### Native Installation
+| Subscriber          | Publisher                     | Signal Name    | Purpose                                       |
+|---------------------|-------------------------------|----------------|-----------------------------------------------|
+| DBW Node            | Traffic light detection node  | tld_enabled    | Sends the Traffic light detected              |
+| DBW Node            | Waypoint Updater              | red_light_near | Checks if its with in the near 100 waypoints  |
 
-* Be sure that your workstation is running Ubuntu 16.04 Xenial Xerus or Ubuntu 14.04 Trusty Tahir. [Ubuntu downloads can be found here](https://www.ubuntu.com/download/desktop).
-* If using a Virtual Machine to install Ubuntu, use the following configuration as minimum:
-  * 2 CPU
-  * 2 GB system memory
-  * 25 GB of free hard drive space
 
-  The Udacity provided virtual machine has ROS and Dataspeed DBW already installed, so you can skip the next two steps if you are using this.
+Most of the code was taken from the Udacity lectures. The code above for adding additional Subscriber and Publisher was done separately.
 
-* Follow these instructions to install ROS
-  * [ROS Kinetic](http://wiki.ros.org/kinetic/Installation/Ubuntu) if you have Ubuntu 16.04.
-  * [ROS Indigo](http://wiki.ros.org/indigo/Installation/Ubuntu) if you have Ubuntu 14.04.
-* [Dataspeed DBW](https://bitbucket.org/DataspeedInc/dbw_mkz_ros)
-  * Use this option to install the SDK on a workstation that already has ROS installed: [One Line SDK Install (binary)](https://bitbucket.org/DataspeedInc/dbw_mkz_ros/src/81e63fcc335d7b64139d7482017d6a97b405e250/ROS_SETUP.md?fileviewer=file-view-default)
-* Download the [Udacity Simulator](https://github.com/udacity/CarND-Capstone/releases).
+###Setup used:
 
-### Docker Installation
-[Install Docker](https://docs.docker.com/engine/installation/)
+1. Udacity workspace:
+   Some issues faced with respect to communication delay between different  modules. 
+2. Windows 7 Host OS- Ubuntu 16.04 using Virtual Box setup.
+   This setup showed some improvements compared to udacity workspace. But still there were some communication delay between different modules. 
+   
+### Issues Faced
 
-Build the docker container
-```bash
-docker build . -t capstone
-```
+1. Car oscillating between lanes and not following the waypoints.
+      - Optimizing the PID controller helped to solve this problem to a certain extent
+      - Reducing the frequency rate of waypoint updater to 30 Hz. This matches the frequency of Waypoint follower node.
+2. Car not stopping at the Red light signal.
+      - This was solved by adding tld_enabled signal to the Traffic Detector block. The block once it detects the red signal, updates this line to TRUE. This is then received by DBW Node and send to Twist controller for applying breaks.
+3. Car Stopping at highway well before the Traffic signal detected in the waypoints.
+      - This problem should only visible in Simulator as the Get signal state function reads it from a file. Once Traffic Detector block updates the tld_enabled signal to TRUE, the break is applied
+      - Solution: The Waypoint updater block detects if the red signal detected is with in the next 100 waypoints. If so it updates the red_light_near signal to DBW Node. The DBW Node then compares if both tld_enabled and red_light_near signal are TRUE. If so sends the information to Twist controller for applying breaks.
+      
+ Following issues still needs a fix:
+ 
+ 1. Car stops well before the Red light signal and not just before the signal line.
+        - I tried to solve the problem by having a check if the red light is below or equal to 40 waypoints, then update the red_light_near signal. This introduced some indecision in the simulator environment. When it is too close to traffic lights, the decision to apply breaks and stop was flipping with moving forward decision. So reverted back this decision
+ 
+ 2. Car oscillations are controlled completely. 
+ 
+ Following were not tested
+ 
+ 1. The code was not tested on the second track. So traffic classification problem was not implemented.
+ 
+ 
+      
 
-Run the docker file
-```bash
-docker run -p 4567:4567 -v $PWD:/capstone -v /tmp/log:/root/.ros/ --rm -it capstone
-```
-
-### Port Forwarding
-To set up port forwarding, please refer to the [instructions from term 2](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/f758c44c-5e40-4e01-93b5-1a82aa4e044f/concepts/16cf4a78-4fc7-49e1-8621-3450ca938b77)
-
-### Usage
-
-1. Clone the project repository
-```bash
-git clone https://github.com/udacity/CarND-Capstone.git
-```
-
-2. Install python dependencies
-```bash
-cd CarND-Capstone
-pip install -r requirements.txt
-```
-3. Make and run styx
-```bash
-cd ros
-catkin_make
-source devel/setup.sh
-roslaunch launch/styx.launch
-```
-4. Run the simulator
-
-### Real world testing
-1. Download [training bag](https://s3-us-west-1.amazonaws.com/udacity-selfdrivingcar/traffic_light_bag_file.zip) that was recorded on the Udacity self-driving car.
-2. Unzip the file
-```bash
-unzip traffic_light_bag_file.zip
-```
-3. Play the bag file
-```bash
-rosbag play -l traffic_light_bag_file/traffic_light_training.bag
-```
-4. Launch your project in site mode
-```bash
-cd CarND-Capstone/ros
-roslaunch launch/site.launch
-```
-5. Confirm that traffic light detection works on real life images
