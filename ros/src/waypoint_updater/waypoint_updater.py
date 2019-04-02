@@ -6,6 +6,7 @@ from geometry_msgs.msg import PoseStamped, TwistStamped
 from styx_msgs.msg import Lane, Waypoint
 from scipy.spatial import KDTree
 from std_msgs.msg import Int32
+from std_msgs.msg import Bool
 
 
 import math
@@ -37,13 +38,14 @@ class WaypointUpdater(object):
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
 
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
+        self.red_enabled_near = rospy.Publisher('/red_light_near', Bool, queue_size=1)
         # TODO: Add other member variables you need below
         self.base_lane = None
         self.pose = None
         self.stopline_wp_idx = -1
         self.waypoints_2d = None
         self.waypoint_tree = None
-
+        #self.red_enabled_near = False
 
 
         self.loop()
@@ -80,10 +82,10 @@ class WaypointUpdater(object):
         return closest_idx
 
     def publish_waypoints(self):
-        rospy.logwarn('Generating lane')
+        rospy.logwarn('Generating lane %f', rospy.get_time())
         final_lane = self.generate_lane()
         self.final_waypoints_pub.publish(final_lane)
-        rospy.logwarn('Published lane')
+        rospy.logwarn('Published lane %f', rospy.get_time())
 
     def generate_lane(self):
         lane = Lane()
@@ -97,9 +99,12 @@ class WaypointUpdater(object):
         if (self.stopline_wp_idx == -1) or (self.stopline_wp_idx >= farthest_idx):
             rospy.logwarn('did not detect traffic light')
             lane.waypoints = base_waypoints
+            self.red_enabled_near.publish(False)
         else:
             rospy.logwarn('detected traffic light')
             lane.waypoints = self.decelerate_waypoints(base_waypoints, closest_idx)
+            #if(farthest_idx-self.stopline_wp_idx <= 80):
+            self.red_enabled_near.publish(True)
 
         return lane
 
