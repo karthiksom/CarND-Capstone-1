@@ -100,10 +100,10 @@ class TLDetector(object):
             light_wp = light_wp if state == TrafficLight.RED else -1
             self.last_wp = light_wp
             self.upcoming_red_light_pub.publish(Int32(light_wp))
-            #rospy.loginfo('detected red traffic light published: %s', self.last_wp)
+            rospy.loginfo('detected red traffic light published: %s', self.last_wp)
         else:
             self.upcoming_red_light_pub.publish(Int32(self.last_wp))
-            #rospy.loginfo('repeating last detected red traffic light published: %s', self.last_wp) 
+            rospy.loginfo('repeating last detected red traffic light published: %s', self.last_wp) 
         self.state_count += 1
 
     def get_closest_waypoint(self, x,y):
@@ -177,7 +177,7 @@ class TLDetector(object):
                     line_wp_idx = temp_wp_idx
         if closest_light:
             state = self.get_light_state(closest_light)
-            #rospy.loginfo ('closest light %s', state)
+            rospy.loginfo ('closest light %s', state)
             light_color_decision = True if state == TrafficLight.RED else False
             self.tld_enabled_pub.publish(light_color_decision)
             return line_wp_idx, state
