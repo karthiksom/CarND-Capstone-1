@@ -72,11 +72,13 @@ class DBWNode(object):
         rospy.Subscriber('/twist_cmd' , TwistStamped, self.twist_cb)
         rospy.Subscriber('/current_velocity' , TwistStamped, self.velocity_cb)
         rospy.Subscriber('/tld_enabled', Bool, self.tld_enabled_cb)
-        
+        rospy.Subscriber('/red_light_near', Bool, self.red_light_near_cb)
         self.current_vel = None
         self.curr_ang_vel = None
         self.dbw_enabled = None
         self.tld_enabled = False
+        self.tld_enabled_cb = False
+        self.redlight_enabled = False
         self.linear_vel = None
         self.angular_vel = None
         self.throttle = self.steering = self.brake = 0
@@ -91,7 +93,12 @@ class DBWNode(object):
             # You should only publish the control commands if dbw is enabled
             if not None in (self.current_vel,self.linear_vel,self.angular_vel):
                 
-                rospy.logwarn(' Current_vel %s Linear Vel %s Angular Velocity %s', self.current_vel,self.linear_vel,self.angular_vel)                   
+                rospy.logwarn(' Current_vel %s Linear Vel %s Angular Velocity %s tld enabled %s', self.current_vel,self.linear_vel,self.angular_vel, self.tld_enabled)
+                if((self.tld_enabled_cb == True) and (self.redlight_enabled == True)):
+                     self.tld_enabled = True
+                else: 
+                     self.tld_enabled = False
+                   
                 self.throttle, self.brake, self.steering = self.controller.control(self.current_vel,            
                                                                                    self.dbw_enabled,
                                                                                    self.linear_vel,
@@ -106,7 +113,10 @@ class DBWNode(object):
         self.dbw_enabled = msg
    
     def tld_enabled_cb(self, msg):
-        self.tld_enabled = msg.data
+        self.tld_enabled_cb = msg.data
+    
+    def red_light_near_cb(self, msg):
+        self.redlight_enabled = msg.data
     
     def twist_cb(self, msg):
        # rospy.logwarn('Getting Twist_cmd')
