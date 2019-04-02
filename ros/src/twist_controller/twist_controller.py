@@ -22,9 +22,9 @@ class Controller(object):
         #TODO: Implement
         self.yaw_controller = YawController(wheel_base, steer_ratio, 0.1, max_lat_accel, max_steer_angle)
         
-        kp = 0.3 #0.1 #0.3
-        ki = 0.1 #0.001
-        kd = 0 # 20  #0
+        kp = 0.3 #0.4 #0.3
+        ki = 0.001 #0.001
+        kd = 25 # 20  #0
         mn = 0 #decel_limit #0.  #Minimum throttle value
         mx = 0.2 #accel_limit #0.2 #Maximum throttle value 
         self.throttle_controller = PID(kp, ki, kd, mn, mx)
@@ -51,15 +51,16 @@ class Controller(object):
         
         #rospy.logwarn("Angular velocity: {}".format(angular_vel))
         #rospy.logwarn("Linear velocity: {}".format(linear_vel))
-        #rospy.logwarn("current velocity: {}".format(current_vel))
+        rospy.logwarn("current velocity: {}".format(current_vel))
         
         current_vel = self.lpf.filt(current_vel)
-        #rospy.logwarn("filtered velocity: {}".format(current_vel))
+        rospy.logwarn("filtered velocity: {}".format(current_vel))
         
         steering = self.yaw_controller.get_steering(linear_vel, angular_vel, current_vel)
         #steering = self.lpf.filt(steering)
         
         vel_error = linear_vel - current_vel
+        rospy.logwarn("vel_error: {}".format(vel_error))
         self.last_vel = current_vel
         
         current_time = rospy.get_time()
@@ -67,10 +68,11 @@ class Controller(object):
         self.last_time = current_time
         
         throttle = self.throttle_controller.step(vel_error, sample_time)
+        rospy.logwarn("throttle: {}".format(throttle))
         brake = 0
         
         
-        throttle = self.lpf.filt(throttle)
+        #throttle = self.lpf.filt(throttle)
             
         #if acceleration > 0:
         #   throttle = acceleration
@@ -84,6 +86,7 @@ class Controller(object):
             throttle = 0
             brake = 400 
         elif throttle < .1 and vel_error < 0:
+            rospy.logwarn("throttle should go down,breaks to be applied")
             throttle = 0
             decel = max(vel_error, self.decel_limit)
             brake = abs(decel) * self.vehicle_mass * self.wheel_radius
